@@ -81,13 +81,12 @@ A repository of its own (for example `tekken6-nx-installer`), made from renut_nx
   matched by any common variant) are built into the NRO (`tools/renut_release_shaders.py --keep`); the renderer reads
   the installer's package first and the NRO's own for the rest.
 - **Release NRO:** 51.4 MB (`-DBANJO_RENUT_RELEASE_SHADERS=ON`).
-- **Installer:** [xsaja/tekken6-nx-installer](https://github.com/xsaja/tekken6-nx-installer) (private for now): the
+- **Installer:** [xsaja/tekken6-nx-installer](https://github.com/xsaja/tekken6-nx-installer) (page: https://xsaja.github.io/tekken6-nx-installer/): the
   base's page with Tekken's `game.json`, the `xctd` coding, and the translator and uam rebuilt from this repository with
   Emscripten 6.0.11. In Node it makes 5,908 shaders and 11,221 variants; the NRO with those files played in Ryujinx
   (menus, character select, a fight) with no shader missing and no compile failure.
 - **Console test:** the zip made by the installer, extracted to a clean SD card and started from a new Sphaira forwarder
   (39-bit), ran smoothly from its first launch.
-- **Release notes:** [release-notes/v1.0.0.md](release-notes/v1.0.0.md) (the installer page's address goes in when the
-  page is published).
-- **To do before publishing:** make the repositories public, GitHub Pages for the installer, and the tag `v1.0.0` with
-  `tekken6-nx.nro` and `LICENSES.txt` attached.
+- **Release notes:** [release-notes/v1.0.0.md](release-notes/v1.0.0.md).
+- **Published 2026-11-27:** both repositories public, the page on GitHub Pages, the tag `v1.0.0` with
+  `tekken6-nx.nro` and `LICENSES.txt`.

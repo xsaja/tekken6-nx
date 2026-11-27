@@ -11,11 +11,11 @@ on the Switch GPU's own API, deko3d, by [reNut](https://github.com/masterspike52
 
 ## How to install
 
-1. Open the installer page (its address is given with each release).
+1. Open the installer page: **https://xsaja.github.io/tekken6-nx-installer/** (Chrome or Edge on a computer).
 2. Choose your game: the **disc image** (`.iso`) or a **folder** you extracted it into, and press **Create
    tekken6-nx.zip**. Everything runs in your browser and the game files never leave your computer: the page checks your
    copy, downloads the build and makes the game's shaders from your own files.
-3. Extract the zip into `sdmc:/switch/`.
+3. Extract the zip to the root of the SD card (it holds the `switch/tekken6-nx/` folder).
 
 ```text
 /switch/tekken6-nx/
