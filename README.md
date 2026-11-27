@@ -74,8 +74,8 @@ game writes the default one again at the next start.
 
 ## Performance
 
-The port runs at the console's stock clocks on four cores, 720 lines in handheld and 1080 docked. The release NRO is
-built with link-time optimisation and PGO from console sessions. In the heaviest fights the frame is limited by the
+The port runs at the console's stock clocks on four cores. The game draws its 3D image at its own 1024x576, as on the
+Xbox 360, in handheld and docked, scaled to the screen. The release NRO is built with link-time optimisation and PGO from console sessions. In the heaviest fights the frame is limited by the
 game's main thread and by the jobs it waits for (character skinning above all), not by the GPU. Every optimisation was
 checked against the original functions, call by call: the measurements are in [docs/switch-port-log.md](docs/switch-port-log.md).
 
