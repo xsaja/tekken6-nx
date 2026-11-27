@@ -72,3 +72,18 @@ A repository of its own (for example `tekken6-nx-installer`), made from renut_nx
   gets the four-core NPDM, so no player has to know their forwarder's id.
 - The player's file is `tekken6.toml` (`katamari.toml` is still read when it is the only one).
 - No logs (`log_level = "off"`); `rex_stderr.log` and `rex_crash.log` stay for crash reports.
+
+## State of the first release (2026-11-27)
+
+- **Shaders:** `tools/tekken_shader_records.py` finds 70 shaders in `default.xex` and 5,838 in 129 records of the XCTD
+  banks `DATA302`-`DATA304`. The other 964 (the vertex shaders of `DATA301`'s first entry, an NSXR package packed a
+  second time by a coder of the game's own: a marker byte `FF`, the 8-byte header, then an LZSS-like stream not
+  matched by any common variant) are built into the NRO (`tools/renut_release_shaders.py --keep`); the renderer reads
+  the installer's package first and the NRO's own for the rest.
+- **Release NRO:** 51.4 MB (`-DBANJO_RENUT_RELEASE_SHADERS=ON`).
+- **Installer:** [xsaja/tekken6-nx-installer](https://github.com/xsaja/tekken6-nx-installer) (private for now): the
+  base's page with Tekken's `game.json`, the `xctd` coding, and the translator and uam rebuilt from this repository with
+  Emscripten 6.0.11. In Node it makes 5,908 shaders and 11,221 variants; the NRO with those files played in Ryujinx
+  (menus, character select, a fight) with no shader missing and no compile failure.
+- **To do before publishing:** a console test of the zip on a clean SD card with a new forwarder (and whether its first
+  launch needs a second one for the four cores), GitHub Pages for the installer, and the first tag.

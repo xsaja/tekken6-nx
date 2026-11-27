@@ -14,6 +14,12 @@ Writes into app/out/renut_switch_release/:
 Every one of Beautiful Katamari's 195 shaders is a container stored in its files (111 in default.xex, 84 in the models
 of d02-d05.dat), so no GLSL package is built into the NRO: app/cmake/banjo_renut_gpu.cmake
 (BANJO_RENUT_RELEASE_SHADERS) builds with these files.
+
+tekken6-nx (2026-11-27): --keep <list> builds the shaders it names into the NRO (deko3d_glsl_switch.cpp, the build's own
+package), the ones the installer cannot make: Tekken's 964 vertex shaders of DATA301's first entry, which a second
+coder of the game's own packs (tools/tekken_shader_records.py writes the list, out/release/records_missing.txt, names
+as {vs|ps}_<xxh3>.bin). The renderer reads the installer's package first and this one for what it lacks
+(banjo_renut_deko3d.cpp CreateGameShader; shader_library.cpp merges the two tables).
 """
 import argparse
 import os
@@ -65,6 +71,7 @@ def main():
     ap.add_argument('--glsl', default=os.path.join(ROOT, 'out', 'deko3d_shaders', 'glsl_opt'))
     ap.add_argument('--cache', default=os.path.join(ROOT, 'app', 'out', 'renut_switch', 'shader_cache_switch.cpp'))
     ap.add_argument('--out', default=os.path.join(ROOT, 'app', 'out', 'renut_switch_release'))
+    ap.add_argument('--keep', help='a list of the shaders built into the NRO ({vs|ps}_<xxh3>.bin, one a line)')
     a = ap.parse_args()
     names = sorted(f for f in os.listdir(a.glsl) if re.fullmatch(r'(vs|ps)_[0-9A-F]{16}\.glsl', f))
     if not names:
@@ -72,10 +79,29 @@ def main():
     os.makedirs(a.out, exist_ok=True)
     package(a.glsl, names, os.path.join(a.out, 'sd'))
     os.remove(os.path.join(a.out, 'sd', 'deko3d_glsl_switch.cpp'))  # the installer's file is never built in
+    builtin = os.path.join(a.out, 'deko3d_glsl_switch.cpp')
+    if os.path.exists(builtin):
+        os.remove(builtin)
+    kept = []
+    if a.keep:
+        by_lower = {n.lower(): n for n in names}
+        for line in open(a.keep, encoding='utf-8'):
+            line = line.strip()
+            if not line:
+                continue
+            glsl = by_lower.get(os.path.splitext(line)[0].lower() + '.glsl')
+            if not glsl:
+                sys.exit(f'renut_release_shaders: {line} (--keep) has no GLSL in {a.glsl}')
+            kept.append(glsl)
+        # its own folder: deko3d_glsl_switch.cpp's .incbin names keep/deko3d_glsl.bin, which stays
+        work = os.path.join(a.out, 'keep')
+        shutil.rmtree(work, ignore_errors=True)
+        package(a.glsl, sorted(set(kept)), work)
+        os.replace(os.path.join(work, 'deko3d_glsl_switch.cpp'), builtin)
     text = open(a.cache, encoding='utf-8').read()
     with open(os.path.join(a.out, 'shader_cache_switch.cpp'), 'w', encoding='utf-8', newline='\n') as f:
         f.write(strip_spirv(text))
-    print(f'renut_release_shaders: no shader built in, beside the NRO {len(names)} game shaders -> {a.out}')
+    print(f'renut_release_shaders: {len(set(kept))} shaders built in, beside the NRO {len(names)} game shaders -> {a.out}')
 
 
 if __name__ == '__main__':
