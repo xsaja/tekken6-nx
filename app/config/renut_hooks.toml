@@ -1,0 +1,26 @@
+# tekken6-nx: mid-asm hooks (implemented in app/src/tekken6_guest_hooks.cpp), from tekken6-recomp.
+
+# Yield at the startup queue wait's backward branch.
+[[midasm_hook]]
+address = 0x8251C1FC
+name = "Tekken6StartupWait"
+registers = ["r11"]
+
+# Allow the Windows launcher to select the guest's internal 3D render size.
+# These run before the two guest stores that initialize/reset 1024x576.
+[[midasm_hook]]
+address = 0x82219DB4
+name = "ApplyTekkenInternalResolution"
+registers = ["r11", "r10"]
+
+[[midasm_hook]]
+address = 0x82219A28
+name = "ApplyTekkenInternalResolution"
+registers = ["r11", "r10"]
+
+# The offscreen target is resource 0x20000004, initialized at 1024x1024.
+# The launcher can lower it while leaving all other guest resources unchanged.
+[[midasm_hook]]
+address = 0x821AB410
+name = "ApplyTekkenOffscreenResolution"
+registers = ["r3", "r4", "r5"]

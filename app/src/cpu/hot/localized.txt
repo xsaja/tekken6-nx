@@ -1,0 +1,1 @@
+# tekken6-nx: hand-picked machine copies (tools/localize_native.py). Empty until the first profile.

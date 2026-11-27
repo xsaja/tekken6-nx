@@ -1,0 +1,61 @@
+# Tekken 6 for the Switch (tekken6-nx): your options. Every other setting is built into the NRO.
+# Delete this file and the game writes it again at the next start.
+
+# Frame rate cap: "Off" (the game's own, uncapped as on the Xbox 360) or "30".
+frame_cap = "Off"
+
+# Language: by default the console's (when the game has it, English otherwise). To force one, remove the # below:
+# 1 English, 2 Japanese, 3 German, 4 French, 5 Spanish, 6 Italian, 7 Korean, 12 Russian.
+# user_language = 1
+
+# Motion blur: false keeps the game's own rule, which draws it only when the game thinks it has time to spare (on the
+# Switch it then shows only now and then, at 60 fps). true draws it whenever it is on in the game's options
+# (about 3 ms a frame: ~50 fps in fights).
+tekken_blur_always = false
+
+# Face buttons by position, as on an Xbox pad (bottom = A). false = by letter.
+input_xbox_layout = true
+
+# Single Joy-Cons are held sideways, one per player.
+input_joycon_sideways = true
+# With it, a single Joy-Con's stick is turned for the sideways grip.
+input_joycon_sideways_stick = true
+
+# Button mapping for each player: the Switch buttons that press each Xbox button. Empty = default.
+# Buttons: A B X Y L R ZL ZR PLUS MINUS LSTICK RSTICK UP DOWN LEFT RIGHT SL SR NONE. Example: a = "B, ZR"
+
+[input_p1]
+a = ""
+b = ""
+x = ""
+y = ""
+lb = ""
+rb = ""
+lt = ""
+rt = ""
+start = ""
+back = ""
+ls = ""
+rs = ""
+up = ""
+down = ""
+left = ""
+right = ""
+
+[input_p2]
+a = ""
+b = ""
+x = ""
+y = ""
+lb = ""
+rb = ""
+lt = ""
+rt = ""
+start = ""
+back = ""
+ls = ""
+rs = ""
+up = ""
+down = ""
+left = ""
+right = ""

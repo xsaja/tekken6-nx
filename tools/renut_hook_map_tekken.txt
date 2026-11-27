@@ -1,0 +1,116 @@
+# tekken6-nx (2026-11-05): Renut's hooks placed by hand in Tekken 6 (Default.xex Rev 1, XDK 2.0.8276).
+# One line per hook: the address the hook carries now (katamari-nx's), Tekken's function (or - to leave it unhooked),
+# the evidence. Read by tools/renut_hook_remap_tekken.py. No reference generated tree (N&B or Katamari) is available, so
+# every line comes from reading Tekken's code: kernel imports, call chains and the device fields (N&B's layout, see
+# docs/tekken6-notes.md, "Renut's device layout").
+#
+# Device creation and presentation
+824D0598  824D99F0  Direct3D_CreateDevice: allocates 24064 = 0x5E00 bytes (li r3,24064 / li r4,128), stores BehaviorFlags +23980, calls the device init sub_824E2C98
+824D0368  824D9580  D3DDevice_Release: decrements the refcount at +60, at 1 calls D3D_CDevice_Uninitialize sub_824E2F80 and frees the device
+824E1B50  824E2F80  D3D_CDevice_Uninitialize: VdShutdownEngines, VdSetGraphicsInterruptCallback, VdSetSystemCommandBufferGpuIdentifierAddress
+824ED278  824E0230  D3D_XenonGpu_Initialize: called by the device init sub_824E2C98; writes the register packets, +11832, reads +23980
+824E11A0  824E2528  D3D_InitializeApiState: called by the device init; reads PresentInterval +13596 and BehaviorFlags +23980, targets +12448..
+824E1408  824E2790  D3D_InitializePresentationParameters: CreateTexture, CreateSurface twice, SetRenderTarget, SetDepthStencilSurface, auto surfaces +14824..14832, memcpy 124 bytes to +13544, then SetGammaRamp / SetPWLGamma
+824DE218  824D29D0  D3DDevice_SetGammaRamp: gamma +23952 / +23956; called by InitializePresentationParameters before SetPWLGamma
+824DE2F8  824D2AA0  D3DDevice_SetPWLGamma: the same fields; called right after SetGammaRamp
+824E9428  824DA910  D3DDevice_Present: saves viewport +12656 and scissor +12684, SetRenderTarget(0, +14832), SynchronizeToPresentationInterval, Resolve to the front buffer +14828, KickOff, SetViewport, SetScissorRect, Swap
+824E8E90  824DA2E0  D3DDevice_Swap: the only VdSwap caller (also VdGetSystemCommandBuffer, VdPersistDisplay)
+824E89E8  824D9EB0  D3D_SynchronizeToPresentationInterval: Present calls it with r4 = 0 before the resolve; reads PresentInterval +13596
+824F12B8  824EC228  D3DDevice_Resolve: Present's resolve of the back buffer into the front buffer +14828 (961 instructions, targets +12448.., tiling +12736..)
+824E0298  824D4CE8  D3D_CDevice_KickOff: InKickOff +13232; called by Present after the resolve, by Swap and the ring functions
+824E05E8  824D5060  D3DDevice_SetRingBufferParameters: the only VdInitializeRingBuffer / VdEnableRingBufferRPtrWriteBack caller
+# Render targets, viewport, scissor
+824DE868  824D3128  D3DDevice_SetRenderTarget: InitializePresentationParameters and Present call it with index 0; targets +12448..+12464
+824DEBD0  824D3478  D3DDevice_SetDepthStencilSurface: InitializePresentationParameters calls it after the depth surface
+824DE730  824D3078  D3DDevice_SetViewport: loads the 7 viewport words from r4 and tail-calls D3D_SetViewport
+824DE4B8  824D2D90  D3D_SetViewport: the viewport as floats (the tail call above)
+824DDEE0  824D2618  D3DDevice_SetScissorRect: stores the rectangle at +12684..+12696, reads the viewport +12656..; Present's tail calls it
+# Resources
+824D22D8  824DF9E8  D3DDevice_CreateTexture: InitializePresentationParameters' first creation (levels 1)
+824D23F8  824DFB08  D3DDevice_CreateSurface: InitializePresentationParameters calls it twice for the auto surfaces
+# Group A (static reading, 2026-11-05; confidence in brackets)
+824E0590  824D5008  D3DDevice_InsertCallback: (device r3, type r4, callback r5, context r6) -> BeginRing check + sub_824D4920(dev, ring, type, cb, ctx) callback packet; game thunks sub_82521858/78 call it as (dev, 0, fn, ctx); EndTiling-like sub_824DD928 calls it  [high]
+824D01C8  824D9440  D3DDevice_AddRef: 5 instructions, refcount +60 += 1, returns it; sits just before Release sub_824D9580  [high]
+824D0430  824D95D8  D3DDevice_AcquireThreadOwnership: stores GetCurrentThreadId (sub_826B5528) into owner +10888 (0x2A88)  [high]
+824D0470  824D9618  D3DDevice_ReleaseThreadOwnership: eieio; stw 0,+10888; blr (cg.json lists no callers but 6 `bl 0x824d9618` exist in the generated code)  [high]
+824E6410  -         D3DDevice_GetDeviceCaps: absent - no 304-byte (0x130) memcpy from a constant anywhere (only li r5,304 + memcpy sites are game structs sub_8251F700/8252CCC0/8252D1B0 copying from lists), no unrolled 304-byte copy; leave unhooked  [medium]
+824E0110  824D4B60  D3D_CDevice_KickOffSegment: called only by KickOff sub_824D4CE8, reads CommandBuffer +13516 and InKickOff +13232, re-aligns m_pRing +48 against +56 and calls sub_824D4220; same size (0x188) and placement right before KickOff as katamari's 824E0110/824E0298  [high]
+824E04B0  824D4F18  D3D_CDevice_BeginRingBig: (device, count r4): if ring +48 + count*4 > +52 then KickOff, then sub_824D4220 (wait/new segment), returns m_pRing; 13 D3D callers (Swap, Resolve paths...)  [high]
+8255A200  -         D3D_CDevice_BeginRingManual: absent - no function outside the D3D block reads m_pRing +48 with the ring limit and calls into D3D except the draws/Present path; N&B/katamari's copy belongs to the XMV renderer which Tekken does not seem to link; BeginRing is inlined everywhere (lwz 56/48, KickOff)  [medium]
+824DF3F0  824D3BF0  D3D_RingBufferDeviceAllocate: (device, flags r4 bit0, DWORD* pSize r5 read and written back, alignment r6); ring segment fields +14904..14936, InKickOff +13232; called by sub_824D3E20 (= CDevice::AllocateInlineData(dev, dwords, align), the unhooked AllocateInlineData) and sub_824D4220  [high]
+824DFC48  824D3F08  D3D_CDevice_BlockOnFence: (device, fence r4, type r5, ?, noKick r7 byte): compares fence vs +10908 and *(+10896), KickOff if fence==current and !InKickOff, then CBlocker ctor sub_824D9348 / Check loop / dtor; KickOff calls it (fence-2); D3DDevice_BlockOnFence = sub_824D3FD8 calls it with type 6  [high]
+824D0290  824D9458  D3D_CBlocker_Check: loop callee of BlockOnFence; reads owner +10888, 5000 ms timeout then GPU dump sub_824E23C0 (DbgPrint); returns 1 to keep waiting, 0 to stop  [high]
+824E03D0  824D4E20  D3DDevice_IsFencePending: (fence r3); global device via KeGetCurrentProcessType + 0x820007C0/7BC, KickOff when fence == +10908, returns fence-pending compare against *(+10896); same katamari-relative address as KickOff (both -0xB5B0)  [high]
+824E0518  824D4F90  D3DDevice_BlockUntilIdle: (device): BeginRing, wait packet, BlockOnFence(dev, +10908, 4), then spins while +11012 (0x2B04) != 0, exactly as the handler comment; callers include Uninitialize sub_824E2F80 and SetRingBufferParameters  [high]
+824D0488  824D96C0  D3DDevice_UnsetAll: SetRenderTarget(i,0) for i<4 unless == auto back buffer +14832, SetDepthStencilSurface(0) unless == +14824, 3 shader/decl setters (r4=0), SetIndices sub_824D28B8, 16 x SetStreamSource sub_824D2710 (stride 4), 26 x SetTexture sub_824DFCD8; only caller Uninitialize  [high]
+824DE3C0  824D2C98  D3D_ResetAllState: (device, skip_packets r4); unless r4 writes the predication packets from +12716/+12720, SetSurfaceClip sub_824D0060, SetScreenExtentQueryMode(+10916 bits), then the 5 pending masks = -1; the device init sub_824E2C98 calls it last with r4=0  [high]
+824E67C8  824D7438  D3DDevice_SetScreenExtentQueryMode: (device, mode r4): rlwimi mode<<12 into +10916 (0x2AA4), writes register 0xF01 packet; called by ResetAllState and InitializeApiState  [high]
+824EFA58  824DD158  D3DDevice_SetPredication: (device, mask r4): mask 0 -> +12724=0, tile-predicated flag recomputed into +10940 bit0, +12716=-1; else +12716=mask, +10940&=0xFE, +12724=1; then +12720=0, +10932=mask, +10936=0 (matches native::SetPredication field by field)  [high]
+824D4CD8  824E4260  D3DDevice_SetShaderGPRAllocation: (device, flags r4, vs r5, ps r6), 0/0 -> 64/64, rlwimi into GPR word +10920 (0x2AA8) as native::SetShaderGPRAllocation, register packets, tail-calls CleanupGprAllocationSetup  [high]
+824D3FE0  824E3828  D3D_CleanupGprAllocationSetup: only caller SetShaderGPRAllocation; ORs the same dirty bits as native::CleanupGprAllocationSetup into pending +16/+24/+32, then tail-calls SetSurfaceClip sub_824D0060  [high]
+# Group B (static reading, 2026-11-05; confidence in brackets)
+824D9D08  826B6828  D3DDevice_DrawVertices: r4 prim, r5 start (SET_CONSTANT 0x2102 VGT_INDX_OFFSET <- r5), r6 count; inline state flush (824DB6C8/824DC4F0/824DAF98/824DB330), ring +48 vs +56 -> KickOff 824D4CE8, DRAW_INDX auto-index header 0xC0012201; signature (dev,prim,start,count) matches  [high]
+824DA0F0  826B6C18  D3DDevice_DrawIndexedVertices: r4 prim, r5 base vertex (VGT_INDX_OFFSET), r6 start index (*2/*4 + IB +24 address), r7 count; IndexBuffer +12444, DRAW_INDX 0xC0032201; signature matches  [high]
+824DA9C0  -  D3DDevice_DrawIndexedTessellatedVertices: absent; only 826B6828/826B6C18 call the draw-flush helpers (824DB6C8, 824DC4F0 have exactly these 2 callers), no other DRAW_INDX writer outside resolve/clear internals  [medium]
+824D9758  -  D3DDevice_DrawVerticesUP: absent; no function reads VerticesRingEnd +13444 or flushes draw state besides the two draws (XDK linked dead-stripped)  [medium]
+824D92B8  -  D3DDevice_BeginVertices: absent; same evidence (no +13444 access anywhere, no third flush caller)  [medium]
+824F3248  824EE2E0  D3DDevice_ClearF: r4 flags, r5 rect (null -> full target from +12448/+12464 size, tiling +12736.. compare, +13188/13192 extent), r6 color, f1 Z, r8 stencil; tail of the internal clear 824EDC30; called by Clear, BeginTiling, BeginZPass, game 8253B8F8; hook's r8 stencil slot matches  [high]
+824F3370  824EE408  D3DDevice_Clear: r4 count, r5 rects (16-byte stride loop), r6 flags, r7 D3DCOLOR (vupkd3d128 -> vector), f1 Z, r9 stencil passed to ClearF r8; matches hook layout  [high]
+824EFBC8  824DD2C8  BeginTiling raw hook: r4 Flags (stored +13196), r5 Count (stored +12756 TileCount), r6 rects (copied to +12760/+12996), r7 color, f1 Z, r9 stencil; ClearF/SetViewport/SetScissorRect calls; raw arg layout identical to katamari's  [high]
+824F0150  824DD928  EndTiling raw hook: r4 resolve flags (|0x100/|0x200 by +12448/+12464), r5 rects (null -> +12760), r6 dest texture, r7 color, f1 Z, r9 stencil, r10 params; loops TileCount +12756 calling Resolve 824EC228 (with BeginTiling's +13216 Z/+13220 stencil, then caller's on the last); layout identical  [high]
+824D4930  824E3F08  D3DDevice_SetVertexShader: (dev r3, shader r4) stores VertexShader +12704, releases old via 824D55A8 deferred-release ring, clears Flags +10942 bit7, merges shader constant patch into +1152 image; 11 callers  [high]
+824D4630  824E3D48  D3DDevice_SetPixelShader: (dev r3, shader r4) stores PixelShader +12700, same release + patch pattern; 12 callers  [high]
+824D6120  824E4710  D3DDevice_CreateVertexShader: (r3 pFunction) alloc 40/872+size via 824C64B8, memset 872, copy, calls XGRegisterVertexShader 824E4618, sets Common bit; 1 arg as hook  [high]
+824D6010  824E44E8  D3DDevice_CreatePixelShader: (r3 pFunction) twin of CreateVertexShader with a 40-byte header, calls XGRegisterPixelShader 824E3D10; 1 arg  [high]
+824D4C50  824E41E0  D3DDevice_CreateVertexDeclaration: (r3 elements) counts 12-byte elements until Stream==0xFF, allocates n*12+56, builds via 824E40F0; game callers 8252FCA8, 82584F68  [high]
+824D4838  824E4618  XGRegisterVertexShader: (r3 shader, r4 physical) memset 872, Common 6, RefCount 1, BaseFlush 0xFFFF0000, physical +32, 1/2 slots by +872 bit 0x20, fetch copy 12 bytes, slot stride 416, bind word -1; exactly reNut's handler  [high]
+824D2640  824DFCD8  D3DDevice_SetTexture: (dev, sampler r4, texture r5, mask r6) texture slot (sampler+3138)*4 = +12552, fetch constant (sampler+48)*24 in +1152 image, MaxMip/MinMip +11958/+11984, OR mask into m_Pending[3]; 12 callers. Hook ignores r6 (fine)  [high]
+824A3D40  -  D3DDevice_SetTexture_Inline: no game-side copy; only 824D21F8/824D2278 (sampler-state setters) and 824DFCD8 index +12552, no game function stores into the fetch constants  [high]
+824DDFE0  824D2710  D3DDevice_SetStreamSource: (dev, stream r4, vb r5, offset r6, stride r7, mask r8) vertex fetch (17-stream), source (stream+3117)*4 = +12468, stride/4 byte +12536, compares +11840; hook ignores r8  [high]
+824DE188  824D28B8  D3DDevice_SetIndices: (dev, ib r4) releases old +12444 via 824D55A8 ring, stores +12444; 11 callers  [high]
+824D4B48  824E40D8  D3DDevice_SetVertexDeclaration: 5 instructions, stw r4,+11824, m_Pending[2] |= 0x80000; (SetFVF is the separate 824E4800, not hooked)  [high]
+824DB8C8  824D0060  D3D_SetSurfaceClip: (dev, 4 ints r4..r7) reserves ring, checks tiling surfaces +12736.. vs targets +12448.., TileCount +12756, writes clip packets; called by SetScissorRect 824D2618, 824D2C98, Resolve, internal clear  [high]
+824DE7D0  824D3098  D3D_SetSurfaceInfo: (dev, surface r4) MSAA from info bits 16-17 -> +10684 (0/0x8001/0xC003), SurfaceInfo +10368, pending bits 57 and 36, scissor +12684.. from a full rect, tail-calls the viewport wrapper 824D2FF8; only callers SetRenderTarget 824D3128 and SetDepthStencilSurface 824D3478  [high]
+824D4470  824E3B60  D3DDevice_SetVertexShaderConstantB: (dev, start r4, data r5, count r6) bit loop into word 2528+(start>>5) = +10112 (0x2780), m_Pending[4] |= 1<<56; matches SetShaderConstantsB  [high]
+824D44D0  824E3BC0  D3DDevice_SetPixelShaderConstantB: same with word base 2532 = +10128 (0x2790)  [high]
+# Group C (static reading, 2026-11-05; confidence in brackets)
+824DB028  824D65A8  D3DResource_Destroy: only callee of Release; switch on Common&0xF (1..9) as the handler: VB frees +24&~3, IB/PS/CB +24, texture +32/+48 &~FFF, VS +32, surface: EDRAM free sub_824E0070(+28&0xFFF, +44/5120) and HiZ owner 0x82980620 cleared, cmd buffer sub_824D5800; data XMemFree(…,0xB1800000), header XMemFree(…,0x24800000); VdGlobalDevice slot 0x820007BC  [high]
+824DB448  824D58E8  D3D_UnlockResource: (res, base, mip): if (Common&0xF00)==0x100 flushes BaseFlush +20 / MipFlush +24 ranges (sub_824DAA10) and resets them to 0xFFFF0000, then lwarx add -256 on Common; callers are the three unlock wrappers below  [high]
+824DB7B0  824D5C90  D3DVertexBuffer_Unlock: lwz r4,24(r3); rlwinm 0,0,29 (&~3); li r5,0; b UnlockResource  [high]
+824D0700  -         D3DSurface_UnlockRect: absent; UnlockResource has only 3 callers (VB unlock, IB/CB unlock, texture unlock), none reads surface+0x18  [high]
+824DB210  824D67C8  D3D_LockResource: reads VdGlobalDevice slot 0x820007BC (0x820007C0 for process type 2), fence +8/+12 by flags&0x1010 -> sub_824D3F08, lwarx +256 on Common, BaseFlush/MipFlush range update, flags&0x10 -> write-combined address. SIGNATURE MISMATCH: Tekken has an extra 2nd argument (r4, 64-bit; nonzero -> flags|=2 and fence from device+23996 table): (res, r4 extra, r5 type, r6 mip_lock, r7 base, r8 mip, r9 address, r10 size, sp+84 flags, sp+92 cache flags); handler expects (res, type, mip_lock, base, mip, address, size, flags=r10, cache=sp+84)  [high]
+824DB760  824D6B90  D3DVertexBuffer_Lock: LockResource(buf, 0, type 10, 0, +24&~3, 0, +24&~3, +28&0x3FFFFFC, flags=r6, cache 0x3000000); args (buf, offset, size, flags) match the handler  [high]
+824DB870  824D6BE0  D3DIndexBuffer_Lock: LockResource(buf, 0, type 12, 0, +24, 0, +24, +28, flags=r6|2, cache 0); args match the handler  [high]
+824D1918  824DF2E8  D3D_LockSurface: SubresourceLayout sub_824DEE00, BlockSize sub_824DE228 (row pitch *= block height), LockResource type 14 with base +32&~FFF / mip +48&~FFF, adds tail offset. SIGNATURE MISMATCH: Tekken keeps the extra 2nd argument (r4, passed to LockResource's r4): (tex, extra, slice r5, level r6, flags r7, *addr r8, *pitch r9, *slice r10, *tail sp+84); handler expects (tex, slice, level, flags, *addr, *pitch, *slice, *tail)  [high]
+824D19E0  824DF3C0  D3D_Lock2DSurface: calls LockSurface, rect offset from the format table bpp (0x82092B01 lbzx), writes Pitch/pBits. SIGNATURE MISMATCH: (tex, extra r4, slice r5, level r6, *locked r7, *rect r8, flags r9); handler expects (tex, slice, level, *locked, *rect, flags). Only caller is sub_824DF9C8 (passes 0,0)  [high]
+824D1A70  -         D3D_Lock3DSurface: absent; LockSurface sub_824DF2E8 has a single caller (Lock2DSurface)  [high]
+824D2148  824DF9C8  D3DLineTexture_LockRect: (tex, level, *locked, *rect, flags) -> Lock2DSurface(tex, 0, 0, level, ...); the single 2D lock entry (D3DTexture_LockRect's identical body, folded); args match the handler; caller game sub_82586688  [high]
+824D25B8  -         D3DSurface_LockRect: absent; Lock2DSurface's only caller is sub_824DF9C8 (no surface +0x18/+0x1C reads)  [high]
+824D2620  -         D3DVolume_LockBox: absent (no Lock3DSurface)  [high]
+824DB550  824D5B50  D3DResource_AddRef: lwarx +1 at r3+4; at count 1 a texture level (type 4, Common bit 0x40000000) recurses on +24; identical to the handler  [high]
+824DB5C8  824D6B10  D3DResource_Release: lwarx -1 at r3+4; at 0 a level releases +24, then Destroy sub_824D65A8, returns 0  [high]
+824DAF98  824D5858  D3DResource_GetType: type 3 -> by (+48>>9)&3: 3->18, 2->17, 0->20, +32&0x400 ->19; type 4 level with texture +48&0x600==0x400 -> 16; else Common&0xF. (Tekken's sub_824DAF98 is an unrelated device function: Clear-like, reads +12448.. targets)  [high]
+824D2520  824DFC40  D3DSurface_GetDesc: level surface -> Get2DSurfaceDesc(+24, +28>>28, desc); else Format +40, width (+36>>18)+1, height ((+36>>3)&0x7FFF)+1, MultiSample +24&3; Type=4; game callers sub_825336D8, sub_8253B4D8  [high]
+824D25D8  -         D3DVolume_GetDesc: absent (no Get3DSurfaceDesc; GetLevelLayout's only caller is Get2DSurfaceDesc)  [high]
+824D1258  824DED00  D3D_Get2DSurfaceDesc: (tex, level, desc): GetLevelLayout sub_824DE930 into stack, HeaderFormat bit assembly from +28/+32/+40, GetType, desc[6]/[7] = width/height  [high]
+824D1358  -         D3D_Get3DSurfaceDesc: absent (sub_824DE930 has one caller, sub_824DED00)  [high]
+824D0E90  824DE930  D3D_GetLevelLayout: (tex, level, *w r5, *h r6, *d r7, *pitch r8, *size r9); GetType, GetTextureDimensions sub_824DE068, AlignTextureDimensions, BlockSize, format table; args match  [high]
+824D1458  824DEE00  D3D_GetSubresourceLayout: (tex, slice, level, *rowpitch r6, *slicebytes r7, *levelbytes r8, *tail r9, *w r10, *h sp+84, *d sp+92, *addr sp+100) per LockSurface's call; calls GetType, GetTextureDimensions, Align, BlockSize, MipTail; args match  [high]
+824D2080  824DF9B8  D3DBaseTexture_GetLevelCount: lwz +44; rlwinm 26,28,31; +1 (4 instructions); no direct bl callers  [high]
+824D06E8  824DE1A0  D3DArrayTexture_UnlockRect: (tex) -> UnlockResource(tex, +32&~FFF, +48&~FFF) (D3DTexture_UnlockRect's identical body, folded); caller game sub_82586688 after the LockRect above  [high]
+824DB8B8  824D5D50  D3DConstantBuffer_Unlock: (buf) -> UnlockResource(buf, +24, 0); this body is also D3DIndexBuffer_Unlock (caller sub_82584F68 creates/locks IBs); the handler does the same thing  [medium]
+824D2090  -         D3DTexture_GetSurfaceLevel: absent; no code builds a 0x4010xxxx level Common (lis 16400 only in an unrelated file writer)  [high]
+824D2160  -         D3DCubeTexture_GetCubeMapSurface: absent (same search)  [high]
+824D2228  -         D3DVolumeTexture_GetVolumeLevel: absent (same search)  [high]
+824DB698  824D5BC8  D3DDevice_CreateVertexBuffer: XMemAlloc(32, 0x64800000) header, Common 0x100001 / 0x300001 (usage&4) |0x400000 (usage&0x200), data XMemAlloc(len, 0x82800000|..), +24 = data|3, +28 = len&0x3FFFFFC|0x10000002; args (len, usage, pool) match  [high]
+824DB7C0  824D5CA0  D3DDevice_CreateIndexBuffer: same allocations, Common (format<<29)|0x100002 |0x200000 |0x400000, +24 data, +28 len; args (len, usage, format) match  [high]
+824D1B18  824DF450  D3D_SetTextureHeader: (type r3, w, h, d, levels, usage, format r9, packing r10, border sp+84, exp sp+92, pitch sp+100, tex sp+108, *base sp+116, *mip sp+124) per CreateTexture sub_824DF9E8's call; switch type 3/17/18/19/20, GetMaxMipLevels, FindTextureSize; args match  [high]
+824D09C8  824DE468  D3D_FindTextureSize: called by SetTextureHeader and Resolve; reads border sp+84 and pitch sp+100 (10th unused), format table, Align/BlockSize; args match  [high]
+824D0820  824DE2C0  D3D_GetMaxMipLevels: (w, h, d, border): max of (dim - 2*border), 32-cntlzw; identical to the handler  [high]
+824D0650  824DE068  D3D_GetTextureDimensions: (tex, *w, *h, *d) from +36 by dimension (+48>>9)&3, border from +40 bit 31; identical (sub_824DE100 is the fetch-constant twin _GetGpuTextureDimensions, +8/+12/+20)  [high]
+824D0788  824DE228  D3D_BlockSizeOfGpuFormat: (format, *w, *h): 0x2C/0x27 ->4x1, 11..12/0x28 ->2x1, 0x12..0x14, 0x31, 0x33..0x35, 0x3A..0x3D ->4x4; identical  [high]
+824D08A8  824DE348  D3D_AlignTextureDimensions: (*w, *h, *d, bpp, format, dimension, tiled): row 32 / 256/blockbytes, column dim==0?1:32, depth dim==2?4:1, 4 KiB size; identical  [high]
+824D0D38  824DE7D8  D3D_GetMipTailLevelOffsetCoords: (level, w, h, d, rowpitch, slicepitch, format, *x r10, *y sp+84, *z sp+92); 16>>level below 3, format table bpp; matches  [high]
+# Hooked after the first reNut runs (not katamari-nx hooks: written at Tekken's addresses in hooks/shader.cpp)
+#   sub_824DCE60  D3DVertexShader_Bind (XDK 2.0.8276 five-argument form) -> D3DVertexShader_Bind_tekken_hook
+#   sub_824E3D10  XGRegisterPixelShader -> XGRegisterPixelShader_hook

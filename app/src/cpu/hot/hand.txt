@@ -1,0 +1,13 @@
+# tekken6-nx: guest functions with a HAND-WRITTEN native (app/src/cpu/hot/banjo_hand_natives.h, namespace
+# banjo::hand::n_<id>). tools/localize_native.py puts each in front of the generated copy of its function wherever
+# that copy is used.
+#
+#   <address or generated name> [id=<namespace suffix>] [exact=<registers>]
+#
+# Policy (docs/reference/optimising-functions.md): an entry is added only from a console profile that passes the
+# gate, with its evidence (build, scene, thread, share, finding) in a comment on the line above. Empty until then.
+# 2026-11-24, console PGO+LTO 2026-11-21 (archived ELF), Cemetery reports 9-23, Main XThread: inlined in the copy of
+# sub_825234A0 (13.4 % of main's samples), 240 of its 364 samples on this loop's source loads (the skinning workers'
+# fresh 64-byte records, read once a frame): cache misses a prefetch ahead removes. Kept in the 2026-11-23 rounds
+# (main thread limits Cemetery: render waits for it 3.5-6 ms a frame).
+82533C00 exact=v0

@@ -1,0 +1,96 @@
+# tekken6-nx (Tekken 6, title 4E4D07FC, XDK 2.0.8276, Default.xex Rev 1) - ReXGlue codegen configuration.
+# The internal project name stays "renut" (generated/renut_*.h, the renut / renut_recomp targets,
+# out/renut_image.bin) so the skeleton's CMake, post-codegen passes and renderer glue work unchanged.
+#
+# Bring-up used every register-localisation option off, as in the configuration this game's data was validated with
+# (tekken6-recomp). The optimisation keys are turned on in phases, each with its own check (docs/tekken6-notes.md).
+
+includes = [
+"config/renut_funcs.toml",
+"config/renut_hooks.toml",
+"overrides.toml",
+]
+
+# Optimisation phase A (2026-11-19): katamari-nx's keys that need no per-game audit. They change how the C++ is
+# written, not what the guest sees (katamari-nx / banjo-nx's renut_config.toml carry the reasoning and the console
+# measurements). The floating-point ones were already built and run once here on 2026-11-14 (out/emu_runs/dlg_fpkeys,
+# tried as a 2D-art fix, reverted only because they did not fix it).
+skip_lr = false
+skip_msr = true
+cr_as_local = true
+ctr_as_local = true
+xer_as_local = true
+reserved_as_local = true
+dform_disp_split = true
+fctiwz_inline = true
+fcti_inline = true
+dcbt_prefetch = true
+rotate_word_shifts = true
+fp_compares_modeless = true
+fp_mode_lookahead = true
+fp_mode_lookahead_past_branch = true
+fp_copy_pairs = true
+fp_copy_forwarding = true
+div_inline = true
+fp_moves_modeless = true
+# Optimisation phase B (2026-11-19): the register "diet" keys, as katamari-nx. Audited for Tekken 6 on two codegens
+# made only for it (out/audit/gen_na: phase A + setjmp / longjmp, no diet; out/audit/gen_nv: phase A +
+# non_volatile_as_local + elide_lr_stores; docs/tekken6-notes.md, "Codegen options: the register diet"):
+#   - non_volatile_as_local (r14-r31, f14-f31, v14-v31 as C++ locals; the __savegprlr / __restgprlr helpers and their
+#     guest-stack traffic go): tools/read_before_write.py --noreturn=826C81F0 on out/audit/gen_nv (the tool reads the
+#     registers spelled as locals): 8 functions, none a split piece or funclet (every one has its own prologue,
+#     `mflr r12; bl __savegprlr_N`), so no share_registers mark: setjmp (sub_826C8510: CR into the jump buffer, the
+#     codegen's setjmp handling; it has no direct caller), sub_824BF420 / sub_824BF7B0 (`xor r30,r30,r30`: zero
+#     whatever r30 was), and five vector routines (packed 16-bit pixel filters next to the movie decoder) whose
+#     reads are on paths their own flags exclude (sub_826F9DE8 / sub_826FBDA0 / sub_82651878: the rounding vectors
+#     are set when r7 / r9 say so and read only then, r7 / r9 never written in between; sub_82618328: loop-carried
+#     edge flags; sub_826513E8: a v24 lane result left unused when r8 != 0). Prologue stores of unwritten registers
+#     are listed as store-only (harmless).
+#   - v64-v127 stay in ctx (katamari-nx's movie fix, 2026-10-31: its codec loads constant vectors into VMX128
+#     registers in one helper and reads them in the next calls). Tekken's codec family has the same save / restore
+#     pair, sub_8270B528 / sub_8270B870 (v32-v63, below); 306 functions name a register above v63 (128 of them the
+#     __savevmx / __restvmx helpers), whose saves and restores of v64-v127 stay real calls, as on the Xbox 360.
+#   - elide_lr_stores (no `ctx.lr = <return address>` before every call): every `mflr` in the image (14,824) feeds a
+#     prologue save (stw / std to the stack, or r12 into __savegprlr) except three C runtime helpers that only save
+#     and restore it around one call (sub_826A61E0, sub_826B468C, sub_826B46B0: `mflr r31 ... mtlr r31; blr`, the
+#     shape of katamari-nx's sub_827F91DC family); setjmp / longjmp are handled at their call sites by the codegen
+#     (longjmp has 3 callers, 0x826C5574 / 0x826C5598 / 0x826C55BC; setjmp none). In app/src only diagnostics log
+#     ctx.lr (the WMV3 capture's lr= lines, the profiler's caller attribution); none decides anything on it.
+#   - non_argument_as_local (r0, r2, r11, r12, f0, v32-v63 as locals): tools/non_argument_audit.py
+#     --noreturn=826C81F0 on out/audit/gen_na: ENTRY 295 (218 save / restore helpers, kept by name; 46 MSVC unwind
+#     funclets reading the frame in r12, `addi r31,r12,-N`; sub_826A2614 the stack probe (r12), sub_824F5654 and
+#     sub_826B4684 taking r11; the movie codec family saving / restoring v32-v63 through sub_8270B528 / sub_8270B870,
+#     and the sub_82617E28 / sub_82651878 vector routines), RET 20 (17 of the codec family; sub_822109C0 /
+#     sub_82212108 `subfe r10,r11,r11`, sub_826B2648), HANDOVER 0. Every ENTRY and RET function is kept (80 below);
+#     their callers hand the registers over.
+#   - checked on a codegen of this file (out/audit/gen_all): non_argument_audit.py --with-option: 21,784 functions
+#     localize them, HANDOVER 0; read_before_write.py: the same 8; read_before_write.py --volatile: 0.
+non_volatile_as_local = true
+non_volatile_as_local_keep = ["v64-v127"]
+elide_lr_stores = true
+non_argument_as_local = true
+non_argument_as_local_keep = [
+    0x822109C0, 0x82212108, 0x824B50D4, 0x824B50FC, 0x824B53CC, 0x824B53F4, 0x824B5C90, 0x824B5CB0,
+    0x824F5654, 0x82513164, 0x825131E4, 0x8251325C, 0x825C5770, 0x825D2B30, 0x825D6328, 0x825D6748,
+    0x825D73A0, 0x825D7E60, 0x82608D20, 0x8260C760, 0x82617E28, 0x8261BEC8, 0x82651878, 0x82652218,
+    0x82652228, 0x826A2614, 0x826A39A8, 0x826A39C8, 0x826A3D28, 0x826A3D48, 0x826A40F0, 0x826A4110,
+    0x826A42D8, 0x826A42F8, 0x826A4450, 0x826A4470, 0x826A53C8, 0x826A5DA4, 0x826A5DC4, 0x826A6734,
+    0x826A6754, 0x826A69F0, 0x826A6A1C, 0x826A6B24, 0x826A6B44, 0x826A6F70, 0x826AAEE4, 0x826AAF04,
+    0x826AB14C, 0x826AB16C, 0x826AB600, 0x826AB620, 0x826ABFB4, 0x826ABFD4, 0x826AC208, 0x826AC228,
+    0x826AFB94, 0x826AFBB4, 0x826B00F0, 0x826B222C, 0x826B224C, 0x826B2648, 0x826B3018, 0x826B3038,
+    0x826B4684, 0x826E5E58, 0x826F9DE8, 0x826FBDA0, 0x82702240, 0x827080C8, 0x82708710, 0x8270ABC0,
+    0x8270ACE0, 0x8270AE50, 0x8270AF90, 0x8270B138, 0x8270B528, 0x8270B870, 0x827227A0, 0x827234F8,
+]
+
+# setjmp / longjmp (katamari-nx's method, by shape; tools/ppc_dis.py on out/renut_image.bin): setjmp 0x826C8510
+# checks a hook word (`lis r4,0x82D0; lwz r0,0x44A0(r4); bnectr`), then saves f14-f31 and r13-r31 into the buffer at
+# r3 (`stfd f14,0(r3)` ... `std r31,296(r3)`); longjmp 0x826C81F0 reloads them (`mr r7,r3` ... `lfd f14,0(r7)` at
+# 0x826C822C). No direct setjmp caller; 3 longjmp callers (0x826C5574, 0x826C5598, 0x826C55BC).
+setjmp_address = 0x826C8510
+longjmp_address = 0x826C81F0
+
+project_name = "renut"
+file_path = "../../game/Default.xex"
+out_directory_path = "generated"
+
+[functions]

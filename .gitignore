@@ -1,0 +1,94 @@
+# Game data and disc images (copyrighted; supplied by the user)
+*.iso
+*.xex
+*.xexp
+*.bin
+*.BIN
+*.idx
+*.IDX
+*.stfs
+*.con
+*.pirs
+/game/
+/update/
+/dlc/
+assets/game/
+
+# Generated code and build output
+/generated/*
+!/generated/.gitkeep
+/build/
+/build-*/
+/out/
+/build-logs/
+*.nro
+*.elf
+*.nacp
+*.nso
+*.npdm
+*.exe
+*.dll
+*.pdb
+*.lib
+*.a
+*.o
+*.obj
+
+# Profiles, logs, captures
+/pgo/*.profdata
+*.profraw
+*.profdata
+/logs/
+*.log
+/captures/
+*.png.cap
+/profiles/
+
+# Console keys, firmware, emulator data
+*.keys
+prod.keys
+title.keys
+/firmware/
+/ryu-data/
+/keys/
+
+# Local, machine-specific configuration
+local.toml
+*.local.toml
+CMakeUserPresets.json
+CLAUDE.local.md
+.claude/
+.vs/
+.vscode/
+__pycache__/
+*.pyc
+
+# Skeleton layout (app/, out/): generated and game-derived files
+assets/
+app/assets/
+app/generated/*
+!app/generated/rexglue.cmake
+app/out/
+out/
+*.mesp
+*.mesp.idx
+*.dksh
+*.ucode
+*.rgba
+*.mp4
+*.zip
+deko3d_shaders*.bin
+deko3d_glsl*.bin
+pipeline_list*.bin
+vfs_index*.bin
+*.gcda
+*.stream
+tools/difftest/dp.*
+# License texts that match the binary patterns above
+!COPYING.LIB
+
+# Stray run logs in the repository root
+/logs_*.txt
+
+# The NRO icon: the game's cover artwork (Bandai Namco), for local builds only
+/tools/switch/icon/tekken6_icon.jpg
