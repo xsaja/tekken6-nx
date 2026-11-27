@@ -32,12 +32,9 @@ and the list of what it drew, so later sessions prepare it ahead).
 > [!CAUTION]
 > **Launch it through a forwarder made with [Sphaira](https://github.com/ITotalJustice/sphaira), set to a 39-bit address
 > space, and always from the forwarder's icon on the HOME menu.**
-> - Only a forwarder gives the game enough memory (the album applet does not) and **all four CPU cores**. The game needs
->   the fourth core: on three it runs clearly slower.
-> - The first time you launch the forwarder, the game writes a small file that grants the forwarder four cores
->   (`sdmc:/atmosphere/contents/<forwarder id>/exefs/main.npdm`) and keeps three. **Close it and launch the forwarder
->   again**: from then on it has four.
-> - Launching the NRO from Sphaira's or the homebrew menu's list instead runs it on three cores.
+> - Launched from the forwarder's icon, the game gets **all four CPU cores**. It needs the fourth: on three it runs
+>   clearly slower.
+> - Launching the NRO from Sphaira's list instead runs it on three cores.
 
 > [!NOTE]
 > **The first time you play** after installing or updating, the game compiles its shaders for the Switch GPU as it meets
@@ -49,7 +46,7 @@ By default the face buttons work **by position, as on the Xbox 360 pad**: the bo
 one the Xbox's B, and so on. ZR / ZL are RT / LT, R / L are RB / LB, + is Start and − is Back.
 
 To use the buttons by letter instead, set `input_xbox_layout = false` in `tekken6.toml`. Each player's buttons can be
-remapped there (`[input_p1]`, `[input_p2]`). Every controller is its own player; single Joy-Cons are held sideways.
+remapped there (`[input_p1]`, `[input_p2]`).
 
 ## Settings
 
@@ -62,7 +59,6 @@ game writes the default one again at the next start.
 | `user_language` | The game's language. By default the console's; `1` English, `2` Japanese, `3` German, `4` French, `5` Spanish, `6` Italian, `7` Korean, `12` Russian |
 | `tekken_blur_always` | Motion blur. `false` (default) keeps the game's own rule, which draws it only when it thinks it has time to spare (on the Switch, now and then). `true` draws it whenever it is on in the game's options: about 3 ms a frame |
 | `input_xbox_layout` | Face buttons by position (`true`, default) or by letter (`false`) |
-| `input_joycon_sideways` | Single Joy-Cons held sideways, one per player (`true`, default) |
 | `[input_p1]`, `[input_p2]` | Each player's buttons: for every Xbox button, the Switch buttons that press it, e.g. `a = "B, ZR"` |
 
 ## Known issues

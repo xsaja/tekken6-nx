@@ -46,8 +46,9 @@ A repository of its own (for example `tekken6-nx-installer`), made from renut_nx
   `tools/make_release.py`, and checked with its `test/full_node.mjs --reference` against the files of
   `tools/renut_release_shaders.py`.
 - **The page's text:** the same as Katamari's, plus the forwarder notice: a Sphaira forwarder with a 39-bit address
-  space, launched from its icon, for the memory and the four cores; the first launch writes the four-core NPDM, so the
-  forwarder is launched twice the first time. And the known issue of the 2D character select
+  space, launched from its icon, for the four cores. Before the release, check on a console with a new forwarder
+  whether the first launch (which writes the four-core NPDM) needs a second launch, and say so on the page if it does.
+  And the known issue of the 2D character select
   ([tekken6-notes.md](tekken6-notes.md#character-select-in-2d)).
 - **Deployment:** the page's GitHub Actions workflow downloads `tekken6-nx.nro` from the latest release of this
   repository, checks it against `manifest.json` and publishes the page on GitHub Pages.
