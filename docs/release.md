@@ -85,5 +85,9 @@ A repository of its own (for example `tekken6-nx-installer`), made from renut_nx
   base's page with Tekken's `game.json`, the `xctd` coding, and the translator and uam rebuilt from this repository with
   Emscripten 6.0.11. In Node it makes 5,908 shaders and 11,221 variants; the NRO with those files played in Ryujinx
   (menus, character select, a fight) with no shader missing and no compile failure.
-- **To do before publishing:** a console test of the zip on a clean SD card with a new forwarder (and whether its first
-  launch needs a second one for the four cores), GitHub Pages for the installer, and the first tag.
+- **Console test:** the zip made by the installer, extracted to a clean SD card and started from a new Sphaira forwarder
+  (39-bit), ran smoothly from its first launch.
+- **Release notes:** [release-notes/v1.0.0.md](release-notes/v1.0.0.md) (the installer page's address goes in when the
+  page is published).
+- **To do before publishing:** make the repositories public, GitHub Pages for the installer, and the tag `v1.0.0` with
+  `tekken6-nx.nro` and `LICENSES.txt` attached.
