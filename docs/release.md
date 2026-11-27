@@ -54,8 +54,10 @@ A repository of its own (for example `tekken6-nx-installer`), made from renut_nx
 
 ### 3. The repository
 
-- **History:** the working history holds test notes that are not meant for publication. Publish a new branch without
-  it (`git checkout --orphan release`, one commit of the tree) and push only that branch to GitHub as `main`.
+- **History:** the working history holds test notes that are not meant for publication. GitHub gets only the local
+  branch `publish`: snapshots of the working branch's tree, each with the previous snapshot as its only parent.
+  `sh tools/publish_snapshot.sh "message"` adds one, then `git push origin publish:main`. A local pre-push hook
+  (`.git/hooks/pre-push`, not versioned) refuses any other branch.
 - **PGO profile:** decide whether `pgo/*.gcda` (counts and function names, no game code) is committed so the release NRO
   can be rebuilt bit for bit; it is ignored today.
 - **Icon:** `app/CMakeLists.txt` takes `tools/switch/icon/tekken6_icon.jpg` when it exists. Use artwork that can be
