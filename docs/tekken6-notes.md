@@ -229,7 +229,7 @@ Same kernel errors in both logs (cache:, XctdCompressionInformation, \Device\Ima
 bisect, e.g. our generated code without post-codegen, or tekken6-recomp's SDK hunks we did not port (rex_app.cpp,
 mmio, threading_posix is POSIX-only), or log file opens in both at debug level and compare.
 
-Resolved (2026-11-06, manual test with jugar_renut.bat): boot logos, the Kazuya artwork, the character
+Resolved (2026-11-06, manual test of the PC build): boot logos, the Kazuya artwork, the character
 select portraits and the stage thumbnails all show under reNut, and the fighters draw on every Practice stage tried.
 No code changed since the full shader dump (commit 89b0f365, rebuild 2026-11-05 10:36): those 2D screens were missing
 pixel shaders in reNut's cache. The "same under the emulated renderer" finding came from automated runs: run_pc.ps1

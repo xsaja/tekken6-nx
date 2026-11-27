@@ -92,3 +92,5 @@ tools/difftest/dp.*
 
 # The NRO icon: the game's cover artwork (Bandai Namco), for local builds only
 /tools/switch/icon/tekken6_icon.jpg
+/compilar_renut.bat
+/jugar_renut.bat
