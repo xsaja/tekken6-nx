@@ -1954,3 +1954,30 @@ The save's checksum is the big-endian u32 at offset 0: a reflected CRC-32 (table
 final xor, over bytes 4 .. size (size = the u32 at offset 4). `sub_8243D230` checks it (through `sub_82366C38`); a
 wrong one gives "The save file appears to be damaged". In Python:
 `struct.pack('>I', zlib.crc32(data[4:size], 0xffffffff) ^ 0xffffffff)`.
+
+## A second controller: "The gamer profile has changed" in a loop (2026-11-27, release 1.0.1)
+
+On a Switch Lite with an external controller, or a Switch with the Joy-Cons attached and another controller,
+pressing START on the external controller gave "The gamer profile has changed. Returning to the title screen" over
+and over. With the Joy-Cons detached (as player 1) and the external controller second, it did not happen.
+
+Each controller is a guest user, numbered by the order it connects (`input_system.cpp`): the console's own controls
+connect first, so they are user 0 and an external controller user 1. Only user 0 was signed in (`xam_user.cpp`).
+Tekken 6 keeps polling `XamUserGetSigninState` for the user whose controller pressed START (`sub_82667DA0`, the user
+index at offset 0 of its object); user 1 answered "not signed in", which the game takes as a profile change. An Xbox
+360 would have asked for a sign-in there.
+
+Fix: users 1-3 are signed in as user 0's profile, with the same name and XUID (`xam_all_users_signed_in`, on by
+default), in every `XamUser*` call that answered "no such user". The save is the same whichever controller is used.
+Console: an external controller with the Joy-Cons attached starts the game.
+
+## The system message box with the controller (2026-11-27, release 1.0.1)
+
+The box the game opens at its first start ("There is no TEKKEN 6 save data", "Create Save Data") could only be
+answered by touching it on a Switch Lite. It is the runtime's ImGui dialog (`MessageBoxDialog`, `xam_ui.cpp`): the
+focus went to the first button with no cursor drawn, only one face button accepted (the bottom one with the layout
+by position), and ImGui moves its cursor with the D-pad only (its left stick scrolls).
+
+Now the game's default button has the focus and the cursor shows from the start; the D-pad and the left stick (read by
+the dialog: left or up for the previous button, right or down for the next, repeating) move it; A, B or + accept.
+Console: the D-pad, the stick and the buttons all choose "Create Save Data".

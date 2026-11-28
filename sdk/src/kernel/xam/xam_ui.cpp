@@ -248,14 +248,43 @@ class MessageBoxDialog : public XamDialog {
       if (description_.size()) {
         ImGui::Text("%s", description_.c_str());
       }
+      // tekken6-nx (2026-11-27): the box answers the controller as the system's would. A player on a Switch Lite could
+      // only choose "Create Save Data" (the box the game opens at its first start) by touching it: the focus was on
+      // the first button with no cursor drawn, and only one face button accepted (the bottom one with the Xbox 360
+      // layout by position, the right one by letter), so pressing the other did nothing. Now the game's default
+      // button has the focus and the cursor shows from the start, the D-pad and the left stick move it, and A, B or
+      // + accept the button under the cursor. ImGui moves its cursor only with the D-pad (its left stick scrolls), so
+      // the stick is read here: left or up for the previous button, right or down for the next, repeating when held.
       if (first_draw) {
-        ImGui::SetKeyboardFocusHere();
+        ImGui::SetNavCursorVisible(true);
       }
+      const bool accept = ImGui::IsKeyPressed(ImGuiKey_GamepadFaceDown, false) ||
+                          ImGui::IsKeyPressed(ImGuiKey_GamepadFaceRight, false) ||
+                          ImGui::IsKeyPressed(ImGuiKey_GamepadStart, false);
+      const int step = (ImGui::IsKeyPressed(ImGuiKey_GamepadLStickRight, true) ||
+                        ImGui::IsKeyPressed(ImGuiKey_GamepadLStickDown, true))
+                           ? 1
+                       : (ImGui::IsKeyPressed(ImGuiKey_GamepadLStickLeft, true) ||
+                          ImGui::IsKeyPressed(ImGuiKey_GamepadLStickUp, true))
+                           ? -1
+                           : 0;
+      int focus = first_draw ? int(std::min<size_t>(default_button_, buttons_.size() - 1)) : stick_focus_;
+      stick_focus_ = -1;
       for (size_t i = 0; i < buttons_.size(); ++i) {
-        if (ImGui::Button(buttons_[i].c_str())) {
+        if (int(i) == focus) {
+          ImGui::SetKeyboardFocusHere();
+        }
+        const bool pressed = ImGui::Button(buttons_[i].c_str());
+        if (step && ImGui::IsItemFocused()) {
+          const int n = int(buttons_.size());
+          stick_focus_ = (int(i) + step + n) % n;
+          ImGui::SetNavCursorVisible(true);
+        }
+        if (pressed || (!first_draw && accept && ImGui::IsItemFocused())) {
           chosen_button_ = static_cast<uint32_t>(i);
           ImGui::CloseCurrentPopup();
           Close();
+          break;
         }
         ImGui::SameLine();
       }
@@ -274,6 +303,8 @@ class MessageBoxDialog : public XamDialog {
   std::vector<std::string> buttons_;
   uint32_t default_button_ = 0;
   uint32_t chosen_button_ = 0;
+  // The button the left stick moved the cursor to, focused at the next draw (-1: none).
+  int stick_focus_ = -1;
 };
 
 // https://www.se7ensins.com/forums/threads/working-xshowmessageboxui.844116/

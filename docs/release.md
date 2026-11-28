@@ -90,3 +90,10 @@ A repository of its own (for example `tekken6-nx-installer`), made from renut_nx
 - **Release notes:** [release-notes/v1.0.0.md](release-notes/v1.0.0.md).
 - **Published 2026-11-27:** both repositories public, the page on GitHub Pages, the tag `v1.0.0` with
   `tekken6-nx.nro` and `LICENSES.txt`.
+
+## Release 1.0.1 (2026-11-27)
+
+A second controller no longer loops on "The gamer profile has changed", and the system message box answers the
+D-pad, the left stick and A / B / + (both in [switch-port-log.md](switch-port-log.md)). Only the NRO changed: the
+installer's `release/tekken6-nx.nro` and the manifest's `nro_sha256` and `version`; the shader files are the same.
+Notes: [release-notes/v1.0.1.md](release-notes/v1.0.1.md).
